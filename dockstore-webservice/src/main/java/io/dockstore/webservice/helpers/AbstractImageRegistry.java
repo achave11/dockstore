@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import io.dockstore.client.cli.nested.AbstractEntryClient;
@@ -139,6 +140,7 @@ public abstract class AbstractImageRegistry {
         dbTools.removeIf(tool1 -> tool1.getMode() == ToolMode.MANUAL_IMAGE_PATH);
         apiTools.removeIf(tool -> !namespaces.contains(tool.getNamespace()));
         dbTools.removeIf(tool -> !namespaces.contains(tool.getNamespace()));
+
         // Update api tools with build information
         updateAPIToolsWithBuildInformation(apiTools);
 
@@ -167,22 +169,18 @@ public abstract class AbstractImageRegistry {
         Tool tool = toolDAO.findById(toolId);
         List<Tool> apiTools = new ArrayList<>();
 
-        // Find a tool with the given tool's path and is not manual
-        // This looks like we wanted to refresh tool information when not manually entered as to not destroy manually entered information
-        Tool duplicatePath = null;
-
-        List<Tool> toolList = toolDAO.findAllByPath(tool.getPath(), false);
-        for (Tool t : toolList) {
-            if (t.getMode() != ToolMode.MANUAL_IMAGE_PATH) {
-                duplicatePath = t;
-                break;
-            }
-        }
+        // Convert the manual tool to automatic if possible
+        // TODO: It may be possible that only the second conversion is required
+        // Look for an automatic tool with the same path
+        Optional<Tool> duplicatePathTool = toolDAO.findAllByPath(tool.getPath(), false)
+                .stream()
+                .filter(t -> t.getMode() != ToolMode.MANUAL_IMAGE_PATH)
+                .findFirst();
 
         // If exists, check conditions to see if it should be changed to auto (in sync with quay tags and git repo)
-        if (tool.getMode() == ToolMode.MANUAL_IMAGE_PATH && duplicatePath != null && tool.getRegistry()
-                .equals(Registry.QUAY_IO.toString()) && duplicatePath.getGitUrl().equals(tool.getGitUrl())) {
-            tool.setMode(duplicatePath.getMode());
+        if (tool.getMode() == ToolMode.MANUAL_IMAGE_PATH && duplicatePathTool.isPresent() && tool.getRegistry()
+                .equals(Registry.QUAY_IO.toString()) && duplicatePathTool.get().getGitUrl().equals(tool.getGitUrl())) {
+            tool.setMode(duplicatePathTool.get().getMode());
         }
 
         // Check if manual Quay repository can be changed to automatic
@@ -200,6 +198,7 @@ public abstract class AbstractImageRegistry {
             namespaces.add(tool.getNamespace());
             apiTools.addAll(getToolsFromNamespace(namespaces));
         }
+
         apiTools.removeIf(container1 -> !container1.getPath().equals(tool.getPath()));
 
         // Update api tools with build information
@@ -218,11 +217,11 @@ public abstract class AbstractImageRegistry {
         final List<Tool> newDBTools = new ArrayList<>();
         newDBTools.add(toolDAO.findById(tool.getId()));
 
-        // Get tags and update for each tool
+        // Get tags and update for each tool (including manual tools)
         List<Tag> toolTags = getTags(tool);
         updateTags(toolTags, tool, githubToken, bitbucketToken, gitlabToken, tagDAO, fileDAO, toolDAO, client);
 
-        // Return the updated tool
+        // Return the updated tool (first array element)
         return newDBTools.get(0);
     }
 
@@ -244,6 +243,7 @@ public abstract class AbstractImageRegistry {
         // Get all existing tags
         List<Tag> existingTags = new ArrayList<>(tool.getTags());
 
+        // If automatic tool or a Quay tool with no tags
         if (tool.getMode() != ToolMode.MANUAL_IMAGE_PATH || (tool.getRegistry().equals(Registry.QUAY_IO.toString()) && existingTags.isEmpty())) {
 
             if (newTags == null) {
@@ -252,7 +252,8 @@ public abstract class AbstractImageRegistry {
                 return;
             }
 
-            List<Tag> toDelete = new ArrayList<>(0);
+            // Find all tags that exist in DB but not from the API, prepare to delete
+            List<Tag> toDelete = new ArrayList<>();
             for (Iterator<Tag> iterator = existingTags.iterator(); iterator.hasNext(); ) {
                 Tag oldTag = iterator.next();
                 boolean exists = false;
@@ -268,13 +269,14 @@ public abstract class AbstractImageRegistry {
                 }
             }
 
+            // Add or update tags
             for (Tag newTag : newTags) {
-                boolean exists = false;
+                boolean existsInDB = false;
 
-                // Find if user already has the tag
+                // If API tag already exists in the DB then update tag
                 for (Tag oldTag : existingTags) {
                     if (newTag.getName().equals(oldTag.getName())) {
-                        exists = true;
+                        existsInDB = true;
 
                         oldTag.update(newTag);
 
@@ -296,9 +298,9 @@ public abstract class AbstractImageRegistry {
                     }
                 }
 
-                // Tag does not already exist
-                if (!exists) {
-                    // this could result in the same tag being added to multiple containers with the same path, need to clone
+                // If the API tag does not exist in the DB (new) then add tag
+                if (!existsInDB) {
+                    // this could result in the same tag being added to multiple tools with the same path, need to clone
                     Tag clonedTag = new Tag();
                     clonedTag.clone(newTag);
                     if (tool.getDefaultTestCwlParameterFile() != null) {
@@ -311,15 +313,14 @@ public abstract class AbstractImageRegistry {
                 }
             }
 
+            // Create new tags from API that do not exist in the DB
             boolean allAutomated = true;
             for (Tag tag : existingTags) {
-                // create and add a tag if it does not already exist
                 if (!tool.getTags().contains(tag)) {
-                    LOG.info(githubToken.getUsername() + " : Updating tag {}", tag.getName());
+                    LOG.info(githubToken.getUsername() + " : UPDATING tag: {}", tag.getName());
 
                     long id = tagDAO.create(tag);
                     tag = tagDAO.findById(id);
-
                     tool.addTag(tag);
 
                     if (!tag.isAutomated()) {
@@ -328,11 +329,10 @@ public abstract class AbstractImageRegistry {
                 }
             }
 
-            // delete tool if it has no users
+            // Delete tag if it no longer has a matching API tag
             for (Tag t : toDelete) {
                 LOG.info(githubToken.getUsername() + " : DELETING tag: {}", t.getName());
                 t.getSourceFiles().clear();
-                // tagDAO.delete(t);
                 tool.getTags().remove(t);
             }
 
@@ -345,7 +345,7 @@ public abstract class AbstractImageRegistry {
             }
         }
 
-        // Grab files for each version/tag and check if valid
+        // Grab files for each tag and check if valid
         Helper.updateFiles(tool, client, fileDAO, githubToken, bitbucketToken, gitlabToken);
 
         // Now grab default/main tag to grab general information (defaults to github/bitbucket "main branch")
@@ -370,8 +370,8 @@ public abstract class AbstractImageRegistry {
                 sourceCodeRepo.updateEntryMetadata(tool, AbstractEntryClient.Type.WDL);
             }
         }
-        toolDAO.create(tool);
 
+        toolDAO.create(tool);
     }
 
     private SourceFile createSourceFile(String path, SourceFile.FileType type) {
@@ -403,85 +403,79 @@ public abstract class AbstractImageRegistry {
     /**
      * Updates the new list of tools to the database. Deletes tools that have no users.
      *
-     * @param apiToolList tools retrieved from quay.io and docker hub
-     * @param dbToolList  tools retrieved from the database for the current user
+     * @param apiToolList tools retrieved from quay.io
+     * @param dbToolList  tools retrieved from the database for the current user (not including manual tools)
      * @param user        the current user
      * @param toolDAO
      * @return list of newly updated containers
      */
     public List<Tool> updateTools(final Iterable<Tool> apiToolList, final List<Tool> dbToolList, final User user, final ToolDAO toolDAO) {
 
+        // Find all of the existing DB Tools that no longer have a matching API Tool
         final List<Tool> toDelete = new ArrayList<>();
-        // Find containers that the user no longer has
+
         for (final Iterator<Tool> iterator = dbToolList.iterator(); iterator.hasNext(); ) {
-            final Tool oldTool = iterator.next();
-            boolean exists = false;
-            for (final Tool newTool : apiToolList) {
-                if ((newTool.getToolPath().equals(oldTool.getToolPath())) || (newTool.getPath().equals(oldTool.getPath()) && newTool
-                        .getGitUrl().equals(oldTool.getGitUrl()))) {
-                    exists = true;
+            final Tool toolFromDB = iterator.next();
+            boolean existOnAPI = false;
+
+            for (final Tool toolFromAPI : apiToolList) {
+                if (toolFromAPI.getPath().equals(toolFromDB.getPath()) && toolFromAPI.getGitUrl().equals(toolFromDB.getGitUrl())) {
+                    existOnAPI = true;
                     break;
                 }
             }
-            if (!exists && oldTool.getMode() != ToolMode.MANUAL_IMAGE_PATH) {
-                oldTool.removeUser(user);
-                // user.removeTool(oldTool);
-                toDelete.add(oldTool);
+
+            if (!existOnAPI) {
+                toolFromDB.removeUser(user);
+                toDelete.add(toolFromDB);
                 iterator.remove();
             }
         }
 
-        // when a container from the registry (ex: quay.io) has newer content, update it from
-        for (Tool newTool : apiToolList) {
-            String path = newTool.getToolPath();
-            boolean exists = false;
+        // Update existing tools or add new tools
+        for (Tool toolFromAPI : apiToolList) {
+            String path = toolFromAPI.getToolPath();
+            boolean existsInDB = false;
 
-            // Find if user already has the container
-            for (Tool oldTool : dbToolList) {
-                if ((newTool.getToolPath().equals(oldTool.getToolPath())) || (newTool.getPath().equals(oldTool.getPath()) && newTool
-                        .getGitUrl().equals(oldTool.getGitUrl()))) {
-                    exists = true;
-                    oldTool.update(newTool);
+            // Find if user already has the tool in the database, update some tool metadata
+            for (Tool toolFromDB : dbToolList) {
+                if (toolFromAPI.getPath().equals(toolFromDB.getPath()) && toolFromAPI.getGitUrl().equals(toolFromDB.getGitUrl())) {
+                    existsInDB = true;
+                    toolFromDB.update(toolFromAPI);
                     break;
                 }
             }
 
-            // Find if container already exists, but does not belong to user
-            if (!exists) {
-                Tool oldTool = toolDAO.findByPath(path, false);
-                if (oldTool != null) {
-                    exists = true;
-                    oldTool.update(newTool);
-                    dbToolList.add(oldTool);
+            // Find if tool already exists, but does not belong to user
+            if (!existsInDB) {
+                Tool toolFromDB = toolDAO.findByPath(path, false);
+                if (toolFromDB != null) {
+                    existsInDB = true;
+                    toolFromDB.update(toolFromAPI);
+                    dbToolList.add(toolFromDB);
                 }
             }
 
-            // Tool does not already exist
-            if (!exists) {
-                // newTool.setUserId(userId);
-
-                dbToolList.add(newTool);
+            // Add tool if it does not exist in the database
+            if (!existsInDB) {
+                dbToolList.add(toolFromAPI);
             }
         }
 
-        final Date time = new Date();
-        // Save all new and existing containers, and generate new tags
+        // Save all new and existing tools
         for (final Tool tool : dbToolList) {
-            tool.setLastUpdated(time);
+            tool.setLastUpdated(new Date());
             tool.addUser(user);
             toolDAO.create(tool);
-
-            // do not re-create tags with manual mode
-            // with other types, you can re-create the tags on refresh
             LOG.info(user.getUsername() + ": UPDATED Tool: {}", tool.getPath());
         }
 
-        // delete container if it has no users
+        // Delete container if it has no users
         for (Tool c : toDelete) {
             LOG.info(user.getUsername() + ": {} {}", c.getPath(), c.getUsers().size());
 
             if (c.getUsers().isEmpty()) {
-                LOG.info(user.getUsername() + ": DELETING: {}", c.getPath());
+                LOG.info(user.getUsername() + ": DELETING Tool: {}", c.getPath());
                 c.getTags().clear();
                 toolDAO.delete(c);
             }
