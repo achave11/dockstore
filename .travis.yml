@@ -30,48 +30,39 @@ jobs:
     - stage: unit-tests 
       env:
         - TESTING_PROFILE=unit-tests
-      jdk:
-        - oraclejdk8
+      jdk: oraclejdk8
       script: mvn --batch-mode clean install -P$TESTING_PROFILE
     - stage: unit-tests 
       env:
         - TESTING_PROFILE=unit-tests
-      jdk:
-        - oraclejdk9
+      jdk: oraclejdk9
       script: mvn --batch-mode clean install -P$TESTING_PROFILE
     - stage: unit-tests 
       env:
         - TESTING_PROFILE=unit-tests
-      jdk:
-        - openjdk8
+      jdk: openjdk8
       script: mvn --batch-mode clean install -P$TESTING_PROFILE
 
     # no point in running integration tests if we don't pass unit tests
     - stage: integration-tests 
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipITs=true 
-      jdk:
-        - oraclejdk8
+      jdk: oraclejdk8
     - stage: integration-tests 
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipITs=true 
-      jdk:
-        - oraclejdk9
+      jdk: oraclejdk9
     - stage: integration-tests 
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipITs=true 
-      jdk:
-        - openjdk8
+      jdk: openjdk8
 
     - stage: integration-tests
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipClientITs=true
-      jdk:
-        - oraclejdk8
+      jdk: oraclejdk8
     - stage: integration-tests
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipClientITs=true
-      jdk:
-        - oraclejdk9
+      jdk: oraclejdk9
     - stage: integration-tests
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipClientITs=true
-      jdk:
-        - openjdk8
+      jdk: openjdk8
 
     - stage: integration-tests
       env:
