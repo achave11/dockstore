@@ -21,9 +21,7 @@ cache:
 language: java
 jdk:
 - oraclejdk8
-- oraclejdk9
-- openjdk8
-# openjdk9, and oX10 (does not seem to exist yet) 
+
 env:
   - TESTING_PROFILE=integration-tests
 
@@ -32,13 +30,25 @@ jobs:
     - stage: unit-tests 
       env:
         - TESTING_PROFILE=unit-tests
+      jdk:
+        - oraclejdk8
+        - oraclejdk9
+        - openjdk8
       script: mvn --batch-mode clean install -P$TESTING_PROFILE
 
     # no point in running integration tests if we don't pass unit tests
     - stage: integration-tests 
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipITs=true 
+      jdk:
+        - oraclejdk8
+        - oraclejdk9
+        - openjdk8
     - stage: integration-tests
       script: mvn --batch-mode clean install -P$TESTING_PROFILE -DskipClientITs=true
+      jdk:
+        - oraclejdk8
+        - oraclejdk9
+        - openjdk8
     - stage: integration-tests
       env:
         - TESTING_PROFILE=toil-integration-tests
