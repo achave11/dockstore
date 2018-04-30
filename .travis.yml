@@ -21,7 +21,9 @@ cache:
 language: java
 jdk:
 - oraclejdk8
-
+- oraclejdk9
+- openjdk8
+# openjdk9, and oX10 (does not seem to exist yet) 
 env:
   - TESTING_PROFILE=integration-tests
 
