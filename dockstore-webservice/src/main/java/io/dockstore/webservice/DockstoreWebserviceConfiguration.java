@@ -42,6 +42,9 @@ public class DockstoreWebserviceConfiguration extends Configuration {
     @Valid
     private ElasticSearchConfig esConfiguration = new ElasticSearchConfig();
 
+    @Valid
+    private SamConfiguration samConfiguration = new SamConfiguration();
+
     @NotEmpty
     private String template;
 
@@ -360,6 +363,15 @@ public class DockstoreWebserviceConfiguration extends Configuration {
         this.googleClientSecret = googleClientSecret;
     }
 
+    @JsonProperty("samconfiguration")
+    public SamConfiguration getSamConfiguration() {
+        return samConfiguration;
+    }
+
+    public void setSamConfiguration(SamConfiguration samConfiguration) {
+        this.samConfiguration = samConfiguration;
+    }
+
     public class ElasticSearchConfig {
         private String hostname;
         private int port;
@@ -379,5 +391,18 @@ public class DockstoreWebserviceConfiguration extends Configuration {
         public void setPort(int port) {
             this.port = port;
         }
+    }
+
+    public static class SamConfiguration {
+        private String basepath;
+
+        public String getBasepath() {
+            return basepath;
+        }
+
+        public void setBasepath(String basepath) {
+            this.basepath = basepath;
+        }
+
     }
 }

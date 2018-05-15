@@ -18,8 +18,10 @@ package io.dockstore.webservice.resources;
 import java.util.List;
 
 import io.dockstore.webservice.CustomWebApplicationException;
+import io.dockstore.webservice.authorization.AuthorizationInterface;
 import io.dockstore.webservice.core.Entry;
 import io.dockstore.webservice.core.User;
+import io.dockstore.webservice.core.Workflow;
 import org.apache.http.HttpStatus;
 
 /**
@@ -73,7 +75,7 @@ public interface AuthenticatedResourceInterface {
         for (Entry entry : list) {
             if (!user.getIsAdmin() && (entry.getUsers()).stream().noneMatch(u -> ((User)(u)).getId() == user.getId())) {
                 throw new CustomWebApplicationException("Forbidden: you do not have the credentials required to access this entry.",
-                    HttpStatus.SC_FORBIDDEN);
+                        HttpStatus.SC_FORBIDDEN);
             }
         }
     }
@@ -89,4 +91,32 @@ public interface AuthenticatedResourceInterface {
             throw new CustomWebApplicationException("Forbidden: please check your credentials.", HttpStatus.SC_FORBIDDEN);
         }
     }
+
+    /**
+     * Checks if user can read a container
+     * @param user
+     * @param workflow
+     */
+    default void checkUserCanRead(User user, Workflow workflow, AuthorizationInterface authorizationInterface) {
+        try {
+            checkUser(user, workflow);
+        } catch (CustomWebApplicationException ex) {
+            if (!authorizationInterface.canRead(user, workflow)) {
+                throw new CustomWebApplicationException("Forbidden: you do not have the credentials required to access this entry.",
+                        HttpStatus.SC_FORBIDDEN);
+            }
+        }
+    }
+
+    default void checkUserCanWrite(User user, Workflow workflow, AuthorizationInterface authorizationInterface) {
+        try {
+            checkUser(user, workflow);
+        } catch (CustomWebApplicationException ex) {
+            if (!authorizationInterface.canWrite(user, workflow)) {
+                throw new CustomWebApplicationException("Forbidden: you do not have the credentials required to access this entry.",
+                        HttpStatus.SC_FORBIDDEN);
+            }
+        }
+    }
+
 }
