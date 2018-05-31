@@ -78,44 +78,44 @@ public class Workflow extends Entry<Workflow, WorkflowVersion> {
 
     @Column(nullable = false, columnDefinition = "Text default 'STUB'")
     @Enumerated(EnumType.STRING)
-    @ApiModelProperty(value = "This indicates what mode this is in which informs how we do things like refresh, dockstore specific", required = true, position = 13)
+    @ApiModelProperty(value = "This indicates what mode this is in which informs how we do things like refresh, dockstore specific", required = true)
     private WorkflowMode mode = WorkflowMode.STUB;
 
     @Column(columnDefinition = "text")
-    @ApiModelProperty(value = "This is the name of the workflow, not needed when only one workflow in a repo", position = 14)
+    @ApiModelProperty(value = "This is the name of the workflow, not needed when only one workflow in a repo")
     private String workflowName;
 
     @Column(nullable = false)
-    @ApiModelProperty(value = "This is a git organization for the workflow", required = true, position = 15)
+    @ApiModelProperty(value = "This is a git organization for the workflow", required = true)
     private String organization;
 
     @Column(nullable = false)
-    @ApiModelProperty(value = "This is a git repository name", required = true, position = 16)
+    @ApiModelProperty(value = "This is a git repository name", required = true)
     private String repository;
 
     @Column(nullable = false, columnDefinition = "text")
-    @ApiModelProperty(value = "This is a specific source control provider like github or bitbucket or n/a?, required: GA4GH", required = true, position = 17, dataType = "string")
+    @ApiModelProperty(value = "This is a specific source control provider like github or bitbucket or n/a?, required: GA4GH", required = true, dataType = "string")
     @Convert(converter = SourceControlConverter.class)
     private SourceControl sourceControl;
 
     @Column(nullable = false)
-    @ApiModelProperty(value = "This is a descriptor type for the workflow, either CWL or WDL (Defaults to CWL)", required = true, position = 18)
+    @ApiModelProperty(value = "This is a descriptor type for the workflow, either CWL or WDL (Defaults to CWL)", required = true)
     private String descriptorType;
 
     // Add for new descriptor types
     @Column(columnDefinition = "text")
     @JsonProperty("workflow_path")
-    @ApiModelProperty(value = "This indicates for the associated git repository, the default path to the CWL document", required = true, position = 19)
+    @ApiModelProperty(value = "This indicates for the associated git repository, the default path to the CWL document", required = true)
     private String defaultWorkflowPath = "/Dockstore.cwl";
 
     @Column(columnDefinition = "text")
     @JsonProperty("defaultTestParameterFilePath")
-    @ApiModelProperty(value = "This indicates for the associated git repository, the default path to the test parameter file", required = true, position = 20)
+    @ApiModelProperty(value = "This indicates for the associated git repository, the default path to the test parameter file", required = true)
     private String defaultTestParameterFilePath = "/test.json";
 
     @OneToMany(fetch = FetchType.EAGER, orphanRemoval = true)
     @JoinTable(name = "workflow_workflowversion", joinColumns = @JoinColumn(name = "workflowid", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "workflowversionid", referencedColumnName = "id"))
-    @ApiModelProperty(value = "Implementation specific tracking of valid build workflowVersions for the docker container", position = 21)
+    @ApiModelProperty(value = "Implementation specific tracking of valid build workflowVersions for the docker container")
     @OrderBy("id")
     @Cascade(CascadeType.DETACH)
     private final SortedSet<WorkflowVersion> workflowVersions;
@@ -123,12 +123,11 @@ public class Workflow extends Entry<Workflow, WorkflowVersion> {
 
     @OneToOne(mappedBy = "checkerWorkflow", targetEntity = Entry.class, fetch = FetchType.EAGER)
     @JsonIgnore
-    @ApiModelProperty(value = "The parent ID of a checker workflow. Null if not a checker workflow. Required for checker workflows.", position = 22)
+    @ApiModelProperty(value = "The parent ID of a checker workflow. Null if not a checker workflow. Required for checker workflows.")
     private Entry parentEntry;
 
     @Column(columnDefinition = "boolean default false")
     @JsonProperty("is_checker")
-    @ApiModelProperty(position = 23)
     private boolean isChecker = false;
 
     public Workflow() {
@@ -262,12 +261,10 @@ public class Workflow extends Entry<Workflow, WorkflowVersion> {
     }
 
     @JsonProperty("full_workflow_path")
-    @ApiModelProperty(position = 24)
     public String getWorkflowPath() {
         return getPath() + (workflowName == null || "".equals(workflowName) ? "" : '/' + workflowName);
     }
 
-    @ApiModelProperty(position = 25)
     public String getPath() {
         return sourceControl.toString() + '/' + organization + '/' + repository;
     }
@@ -276,7 +273,6 @@ public class Workflow extends Entry<Workflow, WorkflowVersion> {
      * @return
      */
     @JsonProperty("source_control_provider")
-    @ApiModelProperty(position = 26)
     public String getSourceControlProvider() {
         return this.sourceControl.name();
     }

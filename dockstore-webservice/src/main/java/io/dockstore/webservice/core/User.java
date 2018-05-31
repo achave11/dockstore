@@ -69,35 +69,35 @@ public class User implements Principal, Comparable<User> {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", unique = true, nullable = false)
-    @ApiModelProperty(value = "Implementation specific ID for the container in this web service", position = 0)
+    @ApiModelProperty(value = "Implementation specific ID for the container in this web service")
     private long id;
 
     @Column(nullable = false, unique = true)
-    @ApiModelProperty(value = "Username on dockstore", position = 1)
+    @ApiModelProperty(value = "Username on dockstore")
     private String username;
 
     @Column
-    @ApiModelProperty(value = "Indicates whether this user is an admin", required = true, position = 2)
+    @ApiModelProperty(value = "Indicates whether this user is an admin", required = true)
     private boolean isAdmin;
 
     @Column
-    @ApiModelProperty(value = "Company of user", position = 3)
+    @ApiModelProperty(value = "Company of user")
     private String company;
 
     @Column
-    @ApiModelProperty(value = "Bio of user", position = 4)
+    @ApiModelProperty(value = "Bio of user")
     private String bio;
 
     @Column
-    @ApiModelProperty(value = "Location of user", position = 5)
+    @ApiModelProperty(value = "Location of user")
     private String location;
 
     @Column
-    @ApiModelProperty(value = "Email of user", position = 6)
+    @ApiModelProperty(value = "Email of user")
     private String email;
 
     @Column
-    @ApiModelProperty(value = "URL of user avatar on Github.", position = 7)
+    @ApiModelProperty(value = "URL of user avatar on Github.")
     private String avatarUrl;
 
     // database timestamps
@@ -111,19 +111,19 @@ public class User implements Principal, Comparable<User> {
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinTable(name = "endusergroup", joinColumns = @JoinColumn(name = "userid", nullable = false, updatable = false, referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "groupid", nullable = false, updatable = false, referencedColumnName = "id"))
-    @ApiModelProperty(value = "Groups that this user belongs to", position = 8)
+    @ApiModelProperty(value = "Groups that this user belongs to")
     @JsonIgnore
     private final Set<Group> groups;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(name = "user_entry", inverseJoinColumns = @JoinColumn(name = "entryid", nullable = false, updatable = false, referencedColumnName = "id"), joinColumns = @JoinColumn(name = "userid", nullable = false, updatable = false, referencedColumnName = "id"))
-    @ApiModelProperty(value = "Entries in the dockstore that this user manages", position = 9)
+    @ApiModelProperty(value = "Entries in the dockstore that this user manages")
     @JsonIgnore
     private final Set<Entry> entries;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "starred", inverseJoinColumns = @JoinColumn(name = "entryid", nullable = false, updatable = false, referencedColumnName = "id"), joinColumns = @JoinColumn(name = "userid", nullable = false, updatable = false, referencedColumnName = "id"))
-    @ApiModelProperty(value = "Entries in the dockstore that this user starred", position = 10)
+    @ApiModelProperty(value = "Entries in the dockstore that this user starred")
     @OrderBy("id")
     @JsonIgnore
     private final Set<Entry> starredEntries;
@@ -224,7 +224,6 @@ public class User implements Principal, Comparable<User> {
     }
 
     @Override
-    @ApiModelProperty(position = 8)
     public String getName() {
         return getUsername();
     }
