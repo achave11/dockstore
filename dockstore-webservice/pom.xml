@@ -943,27 +943,6 @@
                 <version>1.6.0</version>
                 <executions>
                     <execution>
-                        <id>compile-script</id>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <phase>compile</phase>
-                        <configuration>
-                            <executable>chmod</executable>
-                            <arguments>
-                                <argument>u+x</argument>
-                                <argument>src/main/resources/swagger2open.sh</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <executions>
-                    <execution>
                         <id>process-openapi</id>
                         <goals>
                             <goal>exec</goal>
