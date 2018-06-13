@@ -943,18 +943,13 @@
                 <version>1.6.0</version>
                 <executions>
                     <execution>
-                        <id>swagger2openapi)</id>
+                        <id>process-openapi</id>
                         <goals>
                             <goal>exec</goal>
                         </goals>
-                        <phase>compile</phase>
+                        <phase>install</phase>
                         <configuration>
-                            <executable>swagger2openapi</executable>
-                            <arguments>
-                                <argument>src/main/resources/swagger.yaml</argument>
-                                <argument>-o</argument>
-                                <argument>src/main/resources/openapi.yaml</argument>
-                            </arguments>
+                            <executable>src/main/resources/swagger2open.sh</executable>
                         </configuration>
                     </execution>
                 </executions>
